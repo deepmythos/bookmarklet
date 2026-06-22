@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gist → Bookmarklet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161427;
+    --ink-2:#100e1f;
+    --surface:#211d3a;
+    --surface-2:#2b2650;
+    --line:#3a3463;
+    --text:#ece9ff;
+    --muted:#9b95c4;
+    --gold:#f5c451;
+    --violet:#7c6cff;
+    --green:#5fd0a0;
+    --red:#ff8095;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 78% -8%, rgba(124,108,255,.18), transparent 60%),
+      radial-gradient(900px 520px at 8% 12%, rgba(245,196,81,.08), transparent 55%),
+      var(--ink);
+    color:var(--text);
+    font-family:"Inter",system-ui,sans-serif;
+    min-height:100dvh;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(20px,5vw,56px) 20px 64px;
+  }
+  .wrap{max-width:680px;margin:0 auto;animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .eyebrow{
+    font-family:"Spline Sans Mono",monospace;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 14px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--gold);opacity:.6}
+
+  h1{
+    font-family:"Space Grotesk",sans-serif;font-weight:700;
+    font-size:clamp(30px,7vw,46px);line-height:1.05;letter-spacing:-.02em;
+    margin:0 0 12px;
+  }
+  h1 .mark{color:var(--gold)}
+  .lede{color:var(--muted);font-size:16px;max-width:52ch;margin:0 0 36px}
+  .lede code{
+    font-family:"Spline Sans Mono",monospace;font-size:13px;
+    background:var(--ink-2);padding:2px 6px;border-radius:6px;color:var(--text)
+  }
+
+  .card{
+    background:linear-gradient(180deg,var(--surface),#1d1934);
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;margin-bottom:22px;
+  }
+  label{
+    display:block;font-size:13px;font-weight:600;color:var(--muted);
+    margin-bottom:8px;letter-spacing:.01em;
+  }
+  label .opt{font-weight:400;color:#736da0}
+  .field{
+    width:100%;background:var(--ink-2);border:1px solid var(--line);
+    color:var(--text);border-radius:10px;padding:13px 14px;
+    font-family:"Spline Sans Mono",monospace;font-size:14px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field::placeholder{color:#5a5482}
+  .field:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,108,255,.25)}
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+  .row > div{flex:1 1 200px;min-width:0}
+
+  .tip{
+    margin-top:14px;font-size:13px;color:var(--muted);
+    border-left:2px solid var(--gold);padding:4px 0 4px 12px;
+    display:none;
+  }
+  .tip.show{display:block}
+  .tip a{color:var(--gold);cursor:pointer;text-decoration:underline}
+  .tip.ok{border-left-color:var(--green);color:#b9e8d3}
+
+  /* segmented toggle (switch) */
+  .switch{display:flex;align-items:flex-start;gap:13px;margin-top:18px;cursor:pointer}
+  .switch input{position:absolute;width:1px;height:1px;opacity:0}
+  .switch .track{flex:0 0 auto;width:44px;height:25px;border-radius:999px;
+    background:var(--ink-2);border:1px solid var(--line);position:relative;
+    transition:background .18s,border-color .18s;margin-top:1px}
+  .switch .track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;
+    border-radius:50%;background:var(--muted);transition:transform .18s,background .18s}
+  .switch input:checked + .track{background:rgba(124,108,255,.4);border-color:var(--violet)}
+  .switch input:checked + .track::after{transform:translateX(19px);background:var(--violet)}
+  .switch input:focus-visible + .track{box-shadow:0 0 0 3px rgba(124,108,255,.3)}
+  .switch .lab b{display:block;color:var(--text);font-weight:600;font-size:13px;margin-bottom:2px}
+  .switch .lab span{color:var(--muted);font-size:13px}
+
+  /* ---- The signature: a paper bookmark ribbon you grab and drag ---- */
+  .stage{
+    display:flex;flex-direction:column;align-items:center;
+    padding:18px 0 4px;
+  }
+  .stage .grab-hint{
+    font-family:"Spline Sans Mono",monospace;font-size:12px;color:var(--muted);
+    letter-spacing:.04em;margin-bottom:18px;display:flex;align-items:center;gap:8px;
+  }
+  .stage .grab-hint svg{opacity:.7}
+  .ribbon{
+    --w:230px;
+    width:var(--w);min-height:118px;
+    display:flex;flex-direction:column;justify-content:flex-start;align-items:center;
+    gap:6px;text-align:center;
+    padding:22px 22px 30px;
+    background:linear-gradient(165deg,var(--gold),#e9a93b);
+    color:#2a1d05;border-radius:12px 12px 4px 4px;
+    clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%);
+    box-shadow:0 16px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.4);
+    cursor:grab;text-decoration:none;user-select:none;
+    transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,filter .2s;
+  }
+  .ribbon:hover{transform:translateY(-7px) rotate(-1.2deg);
+    box-shadow:0 24px 46px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.5)}
+  .ribbon:active{cursor:grabbing;transform:translateY(-2px) scale(.99)}
+  .ribbon:focus-visible{outline:3px solid var(--violet);outline-offset:4px}
+  .ribbon .ico{font-size:20px;line-height:1}
+  .ribbon .nm{
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px;
+    line-height:1.15;word-break:break-word;max-width:100%;
+  }
+  .ribbon .sub{font-family:"Spline Sans Mono",monospace;font-size:11px;
+    letter-spacing:.05em;text-transform:uppercase;opacity:.7}
+  .ribbon.disabled{
+    background:var(--surface-2);color:#6f6a98;cursor:not-allowed;
+    box-shadow:none;pointer-events:none;
+  }
+
+  /* ---- generated code ---- */
+  .codehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px}
+  .codehead label{margin:0}
+  .copy{
+    border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+    font-family:"Spline Sans Mono",monospace;font-size:13px;font-weight:500;
+    padding:8px 14px;border-radius:9px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .copy:hover{border-color:var(--violet);background:#332d5e}
+  .copy.ok{border-color:var(--green);color:var(--green)}
+  .code{
+    background:var(--ink-2);border:1px solid var(--line);border-radius:10px;
+    padding:14px;font-family:"Spline Sans Mono",monospace;font-size:13px;
+    color:#cfd8ff;white-space:pre-wrap;word-break:break-all;line-height:1.6;
+    min-height:54px;
+  }
+  .code .ph{color:#5a5482}
+
+  .foot{color:#6f6a98;font-size:13px;text-align:center;margin-top:30px;line-height:1.6}
+  .foot strong{color:var(--muted);font-weight:600}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="eyebrow">Gist → Bookmarklet</p>
+    <h1>Biến một Gist thành <span class="mark">nút bấm</span> trên thanh bookmark.</h1>
+    <p class="lede">Dán URL của gist, app sẽ gói nó thành một bookmarklet luôn tải bản mới nhất — chạy <code>fetch → eval</code> mỗi lần bạn bấm. Kéo dải ruy băng vàng lên thanh bookmark là xong.</p>
+
+    <section class="card">
+      <label for="url">URL của Gist <span class="opt">— nên dùng link <code style="font-size:12px">raw</code></span></label>
+      <input id="url" class="field" type="url" inputmode="url" spellcheck="false"
+        placeholder="https://gist.githubusercontent.com/user/id/raw/script.js" autocomplete="off">
+
+      <div id="rawtip" class="tip">
+        Đây là link trang Gist, không phải nội dung thô. <a id="rawfix">Đổi sang link raw</a> để fetch chạy đúng.
+      </div>
+
+      <div style="margin-top:16px">
+        <label for="name">Tên hiển thị <span class="opt">— nhãn trên thanh bookmark</span></label>
+        <input id="name" class="field" type="text" value="Run Gist" spellcheck="false" autocomplete="off">
+      </div>
+
+      <label class="switch">
+        <input id="latest" type="checkbox" checked>
+        <span class="track"></span>
+        <span class="lab">
+          <b>Luôn lấy phiên bản mới nhất</b>
+          <span>Bỏ commit SHA bị ghim trong link raw, để bookmarklet luôn fetch bản gist mới nhất.</span>
+        </span>
+      </label>
+
+      <div id="vertip" class="tip"></div>
+    </section>
+
+    <section class="card">
+      <div class="stage">
+        <span class="grab-hint">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          Kéo lên thanh bookmark
+        </span>
+        <a id="ribbon" class="ribbon disabled" draggable="true" href="javascript:void(0)" aria-label="Bookmarklet — kéo lên thanh bookmark của trình duyệt">
+          <span class="ico">🔖</span>
+          <span class="nm" id="ribbonName">Run Gist</span>
+          <span class="sub" id="ribbonSub">chưa có URL</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="codehead">
+        <label for="code">Mã bookmarklet</label>
+        <button id="copy" class="copy" type="button" disabled>Sao chép</button>
+      </div>
+      <div id="code" class="code"><span class="ph">// Nhập URL của gist phía trên để tạo mã…</span></div>
+    </section>
+
+    <p class="foot">
+      Để kéo–thả hoạt động, hãy mở file này <strong>trực tiếp trong trình duyệt</strong> (khung xem trước có thể chặn link <code style="font-family:'Spline Sans Mono',monospace">javascript:</code>).<br>
+      Không có link raw? Có thể dùng <strong>https://gist.github.com/user/id/raw</strong> — GitHub sẽ tự chuyển tới bản mới nhất.
+    </p>
+  </main>
+
+<script>
+(function(){
+  var elUrl   = document.getElementById('url');
+  var elName  = document.getElementById('name');
+  var ribbon  = document.getElementById('ribbon');
+  var rName   = document.getElementById('ribbonName');
+  var rSub    = document.getElementById('ribbonSub');
+  var code    = document.getElementById('code');
+  var copy    = document.getElementById('copy');
+  var rawtip  = document.getElementById('rawtip');
+  var rawfix  = document.getElementById('rawfix');
+  var elLatest= document.getElementById('latest');
+  var vertip  = document.getElementById('vertip');
+
+  // Phát hiện & bỏ commit SHA (40 ký tự hex) bị ghim trong link raw của gist
+  function rawInfo(url){
+    var re = /(\/raw)\/[0-9a-f]{40}(?=\/|$|\?|#)/i;
+    var hadSha = re.test(url);
+    return { hadSha: hadSha, latestUrl: hadSha ? url.replace(re, '$1') : url };
+  }
+
+  // Escape một chuỗi để đặt an toàn bên trong dấu nháy đơn của JS
+  function jsq(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+  function build(){
+    var url    = elUrl.value.trim();
+    var name   = elName.value.trim() || 'Run Gist';
+    var latest = elLatest.checked;
+    rName.textContent = name;
+
+    // Gợi ý đổi sang link raw nếu phát hiện trang gist thường
+    var isPage = /gist\.github\.com\/[^\/]+\/[0-9a-f]+/i.test(url) && !/\/raw(\/|$|\?)/i.test(url);
+    rawtip.classList.toggle('show', isPage);
+
+    if(!/^https?:\/\//i.test(url)){
+      ribbon.classList.add('disabled');
+      ribbon.setAttribute('href','javascript:void(0)');
+      ribbon.removeAttribute('data-href');
+      rSub.textContent = 'chưa có URL';
+      vertip.className = 'tip'; vertip.textContent = '';
+      code.innerHTML = '<span class="ph">// Nhập URL của gist phía trên để tạo mã…</span>';
+      copy.disabled = true;
+      copy.textContent = 'Sao chép';
+      copy.classList.remove('ok');
+      return;
+    }
+
+    // Phiên bản: bỏ commit SHA nếu bật "luôn lấy bản mới nhất"
+    var info = rawInfo(url);
+    var effective = latest ? info.latestUrl : url;
+
+    if(latest && info.hadSha){
+      vertip.className = 'tip ok show';
+      vertip.textContent = 'Đã bỏ commit SHA — bookmarklet sẽ luôn lấy bản gist mới nhất.';
+    } else if(!latest && info.hadSha){
+      vertip.className = 'tip show';
+      vertip.textContent = 'Link đang ghim một phiên bản cũ. Bật “Luôn lấy phiên bản mới nhất” để tự cập nhật.';
+    } else {
+      vertip.className = 'tip'; vertip.textContent = '';
+    }
+
+    var bm = "javascript:(function(){fetch('" + jsq(effective) + "').then(r=>r.text()).then(eval);})();";
+
+    ribbon.classList.remove('disabled');
+    ribbon.setAttribute('href', bm);
+    ribbon.setAttribute('data-href', bm);
+    try{ rSub.textContent = new URL(url).hostname.replace(/^www\./,''); }
+    catch(e){ rSub.textContent = 'gist'; }
+
+    code.textContent = bm;
+    copy.disabled = false;
+    copy.textContent = 'Sao chép';
+    copy.classList.remove('ok');
+  }
+
+  rawfix.addEventListener('click', function(){
+    var m = elUrl.value.trim().match(/gist\.github\.com\/([^\/]+)\/([0-9a-f]+)/i);
+    if(m){ elUrl.value = 'https://gist.github.com/' + m[1] + '/' + m[2] + '/raw'; build(); elUrl.focus(); }
+  });
+
+  // Khi kéo, đảm bảo dữ liệu mang theo chính là href javascript:
+  ribbon.addEventListener('dragstart', function(e){
+    var href = ribbon.getAttribute('data-href');
+    if(!href){ e.preventDefault(); return; }
+    e.dataTransfer.setData('text/uri-list', href);
+    e.dataTransfer.setData('text/plain', href);
+  });
+  // Ngăn việc bấm thử làm trang tự chạy eval
+  ribbon.addEventListener('click', function(e){ e.preventDefault(); });
+
+  copy.addEventListener('click', function(){
+    var txt = code.textContent;
+    var done = function(){
+      copy.textContent = 'Đã chép ✓';
+      copy.classList.add('ok');
+      setTimeout(function(){ copy.textContent='Sao chép'; copy.classList.remove('ok'); }, 1600);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done, function(){ fallback(txt); done(); });
+    } else { fallback(txt); done(); }
+  });
+  function fallback(t){
+    var ta=document.createElement('textarea'); ta.value=t;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta);
+  }
+
+  elUrl.addEventListener('input', build);
+  elName.addEventListener('input', build);
+  elLatest.addEventListener('change', build);
+  build();
+})();
+</script>
+</body>
+</html>
