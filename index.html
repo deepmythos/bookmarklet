@@ -289,7 +289,8 @@
       vertip.className = 'tip'; vertip.textContent = '';
     }
 
-    var bm = "javascript:(function(){fetch('" + jsq(effective) + '?' + Date.now() "').then(r=>r.text()).then(eval);})();";
+    var sepChar = effective.indexOf('?') === -1 ? '?' : '&';
+    var bm = "javascript:(function(){fetch('" + jsq(effective) + sepChar + "'+Date.now()).then(r=>r.text()).then(eval);})();";
 
     ribbon.classList.remove('disabled');
     ribbon.setAttribute('href', bm);
